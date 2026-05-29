@@ -1,4 +1,6 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http.Headers;
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using TicketsKeplerTickets.Models.DTOs;
@@ -70,18 +72,126 @@ public class ApiService : IApiService
     }
 
     // ─── Auth ────────────────────────────────────────────────────────────────
+    // NOTE: The API returns flat responses for auth endpoints (no ApiResponse<T> wrapper).
+    // Login returns { accessToken, refreshToken }; we decode the JWT to get claims.
 
-    public async Task<ApiResponse<LoginResult>?> LoginAsync(LoginDto dto) =>
-        await PostAsync<ApiResponse<LoginResult>>("api/auth/login", dto);
+    public async Task<ApiResponse<LoginResult>?> LoginAsync(LoginDto dto)
+    {
+        try
+        {
+            var resp = await _http.PostAsync("api/auth/login", Json(dto));
+            var json = await resp.Content.ReadAsStringAsync();
 
-    public async Task<ApiResponse<object>?> RegisterCustomerAsync(RegisterDto dto) =>
-        await PostAsync<ApiResponse<object>>("api/auth/register-customer", dto);
+            if (!resp.IsSuccessStatusCode)
+            {
+                // Try to read an error message from the response body
+                string message = "Credenciales incorrectas";
+                try
+                {
+                    using var doc = JsonDocument.Parse(json);
+                    if (doc.RootElement.TryGetProperty("message", out var m))
+                        message = m.GetString() ?? message;
+                }
+                catch { /* ignore parse errors */ }
 
-    public async Task<ApiResponse<object>?> ForgotPasswordAsync(ForgotPasswordRequest req) =>
-        await PostAsync<ApiResponse<object>>("api/auth/forgot-password", req);
+                return new ApiResponse<LoginResult> { Success = false, Message = message };
+            }
 
-    public async Task<ApiResponse<object>?> ResetPasswordAsync(ResetPasswordRequest req) =>
-        await PostAsync<ApiResponse<object>>("api/auth/reset-password", req);
+            // Parse the flat { accessToken, refreshToken } response
+            using var root = JsonDocument.Parse(json);
+            var accessToken  = root.RootElement.GetProperty("accessToken").GetString()  ?? "";
+            var refreshToken = root.RootElement.GetProperty("refreshToken").GetString() ?? "";
+
+            // Decode the JWT to extract claims (email, name, roles)
+            var handler = new JwtSecurityTokenHandler();
+            var jwt     = handler.ReadJwtToken(accessToken);
+
+            var email    = jwt.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email    || c.Type == "email")?.Value    ?? "";
+            var fullName = jwt.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Name     || c.Type == "unique_name")?.Value ?? "";
+            var roles    = jwt.Claims.Where(c => c.Type == ClaimTypes.Role || c.Type == "role").Select(c => c.Value).ToList();
+
+            return new ApiResponse<LoginResult>
+            {
+                Success = true,
+                Message = "OK",
+                Data = new LoginResult
+                {
+                    AccessToken  = accessToken,
+                    RefreshToken = refreshToken,
+                    Email        = email,
+                    FullName     = fullName,
+                    Roles        = roles
+                }
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<LoginResult> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<object>?> RegisterCustomerAsync(RegisterDto dto)
+    {
+        try
+        {
+            var resp = await _http.PostAsync("api/auth/register-customer", Json(dto));
+            var json = await resp.Content.ReadAsStringAsync();
+
+            if (resp.IsSuccessStatusCode)
+                return new ApiResponse<object> { Success = true, Message = "Registro exitoso" };
+
+            string message = "Error al registrar";
+            try
+            {
+                using var doc = JsonDocument.Parse(json);
+                if (doc.RootElement.ValueKind == JsonValueKind.String)
+                    message = doc.RootElement.GetString() ?? message;
+                else if (doc.RootElement.TryGetProperty("message", out var m))
+                    message = m.GetString() ?? message;
+            }
+            catch { /* ignore */ }
+
+            return new ApiResponse<object> { Success = false, Message = message };
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<object> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<object>?> ForgotPasswordAsync(ForgotPasswordRequest req)
+    {
+        try
+        {
+            var resp = await _http.PostAsync("api/auth/forgot-password", Json(req));
+            return new ApiResponse<object> { Success = resp.IsSuccessStatusCode, Message = "OK" };
+        }
+        catch { return new ApiResponse<object> { Success = false, Message = "Error de conexión" }; }
+    }
+
+    public async Task<ApiResponse<object>?> ResetPasswordAsync(ResetPasswordRequest req)
+    {
+        try
+        {
+            var resp = await _http.PostAsync("api/auth/reset-password", Json(req));
+            var json = await resp.Content.ReadAsStringAsync();
+
+            if (resp.IsSuccessStatusCode)
+                return new ApiResponse<object> { Success = true, Message = "OK" };
+
+            string message = "El enlace expiró o es inválido";
+            try
+            {
+                using var doc = JsonDocument.Parse(json);
+                if (doc.RootElement.TryGetProperty("message", out var m))
+                    message = m.GetString() ?? message;
+            }
+            catch { /* ignore */ }
+
+            return new ApiResponse<object> { Success = false, Message = message };
+        }
+        catch { return new ApiResponse<object> { Success = false, Message = "Error de conexión" }; }
+    }
 
     public async Task LogoutAsync(string token)
     {
