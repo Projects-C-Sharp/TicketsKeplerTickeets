@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] — Kepler Tickets</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body class="auth-page">
+    <div class="auth-bg">
+        <div class="auth-orb auth-orb--1"></div>
+        <div class="auth-orb auth-orb--2"></div>
+        <div class="auth-orb auth-orb--3"></div>
+    </div>
+    <div class="auth-layout">
+        <div class="auth-side auth-side--left">
+            <div class="auth-promo">
+                <a href="/" class="auth-promo__brand">◈ KEPLER</a>
+                <blockquote class="auth-promo__quote">
+                    "La forma más intuitiva de vivir cada experiencia."
+                </blockquote>
+                <div class="auth-promo__dots">
+                    <span class="dot dot--active"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                </div>
+            </div>
+        </div>
+        <div class="auth-side auth-side--right">
+            @RenderBody()
+        </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.20.0/jquery.validate.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validation-unobtrusive/4.0.0/jquery.validate.unobtrusive.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

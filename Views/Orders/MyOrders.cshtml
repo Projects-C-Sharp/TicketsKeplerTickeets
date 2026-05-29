@@ -1,0 +1,76 @@
+@using TicketsKeplerTickets.Models.DTOs
+@model List<TicketsKeplerTickets.Models.DTOs.OrderDto>
+@{
+    ViewData["Title"] = "Mis Tickets";
+}
+
+<section class="page-header">
+    <div class="container">
+        <h1 class="page-title">Mis Tickets</h1>
+        <p class="page-sub">Historial de compras y tickets con código QR</p>
+    </div>
+</section>
+
+<section class="section">
+    <div class="container">
+        @if (Model.Any())
+        {
+            <div class="orders-list">
+                @foreach (var order in Model)
+                {
+                    <div class="order-card">
+                        <div class="order-card__header">
+                            <div class="order-id">
+                                <span class="order-label">Orden</span>
+                                <span class="order-num">#@order.Id.ToString("D5")</span>
+                            </div>
+                            <div class="order-status order-status--@order.Status.ToString().ToLower()">
+                                @GetStatusLabel(order.Status)
+                            </div>
+                        </div>
+                        <div class="order-card__body">
+                            <div class="order-items">
+                                @foreach (var item in order.Items.Take(3))
+                                {
+                                    <span class="order-seat-badge">💺 @item.SeatLabel</span>
+                                }
+                                @if (order.Items.Count > 3)
+                                {
+                                    <span class="order-more">+@(order.Items.Count - 3) más</span>
+                                }
+                            </div>
+                            <div class="order-meta">
+                                <span>📅 @order.CreatedAt.ToString("dd MMM yyyy, hh:mm tt")</span>
+                            </div>
+                        </div>
+                        <div class="order-card__footer">
+                            <span class="order-total">$@order.Total.ToString("N0")</span>
+                            <a asp-controller="Orders" asp-action="Detail" asp-route-id="@order.Id" class="btn btn-outline btn-sm">
+                                Ver tickets →
+                            </a>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="empty-state">
+                <div class="empty-state__icon">🎟️</div>
+                <h3>Aún no tienes tickets</h3>
+                <p>Compra tu primer ticket y aparecerá aquí.</p>
+                <a asp-controller="Events" asp-action="Index" class="btn btn-primary">Explorar eventos</a>
+            </div>
+        }
+    </div>
+</section>
+
+@functions {
+    string GetStatusLabel(OrderStatus s) => s switch {
+        OrderStatus.Paid      => "✓ Pagado",
+        OrderStatus.Pending   => "⏳ Pendiente",
+        OrderStatus.Cancelled => "✕ Cancelado",
+        OrderStatus.Refunded  => "↩ Reembolsado",
+        _                     => s.ToString()
+    };
+}

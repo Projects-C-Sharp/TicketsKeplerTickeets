@@ -1,0 +1,65 @@
+@model TicketsKeplerTickets.Models.ViewModels.LoginViewModel
+@{
+    ViewData["Title"] = "Iniciar sesión";
+    Layout = "_AuthLayout";
+}
+
+<div class="auth-card">
+    <div class="auth-card__header">
+        <a href="/" class="auth-brand">◈ KEPLER</a>
+        <h1 class="auth-title">Bienvenido de nuevo</h1>
+        <p class="auth-sub">Ingresa a tu cuenta para comprar tickets</p>
+    </div>
+
+    <form asp-controller="Auth" asp-action="Login" method="post" class="auth-form" id="loginForm">
+        <input type="hidden" asp-for="ReturnUrl" />
+        <div asp-validation-summary="All" class="form-errors"></div>
+
+        <div class="form-group">
+            <label asp-for="Email" class="form-label">Correo electrónico</label>
+            <div class="input-wrapper">
+                <span class="input-icon">✉</span>
+                <input asp-for="Email" class="form-input" placeholder="tu@correo.com" autocomplete="email" />
+            </div>
+            <span asp-validation-for="Email" class="field-error"></span>
+        </div>
+
+        <div class="form-group">
+            <div class="label-row">
+                <label asp-for="Password" class="form-label">Contraseña</label>
+                <a asp-controller="Auth" asp-action="ForgotPassword" class="link-small">¿Olvidaste tu contraseña?</a>
+            </div>
+            <div class="input-wrapper">
+                <span class="input-icon">🔒</span>
+                <input asp-for="Password" class="form-input" type="password" placeholder="••••••••" autocomplete="current-password" id="passwordInput" />
+                <button type="button" class="toggle-password" onclick="togglePwd('passwordInput', this)" tabindex="-1">👁</button>
+            </div>
+            <span asp-validation-for="Password" class="field-error"></span>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-full" id="submitBtn">
+            <span class="btn-label">Iniciar sesión</span>
+            <span class="btn-spinner hidden">⟳</span>
+        </button>
+    </form>
+
+    <div class="auth-footer">
+        ¿No tienes cuenta? <a asp-controller="Auth" asp-action="Register" class="link-accent">Regístrate gratis</a>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+function togglePwd(id, btn) {
+    const input = document.getElementById(id);
+    if (input.type === 'password') { input.type = 'text'; btn.textContent = '🙈'; }
+    else { input.type = 'password'; btn.textContent = '👁'; }
+}
+document.getElementById('loginForm').addEventListener('submit', function() {
+    const btn = document.getElementById('submitBtn');
+    btn.querySelector('.btn-label').classList.add('hidden');
+    btn.querySelector('.btn-spinner').classList.remove('hidden');
+    btn.disabled = true;
+});
+</script>
+}

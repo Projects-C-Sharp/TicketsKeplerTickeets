@@ -1,0 +1,111 @@
+﻿@using TicketsKeplerTickets.Models.DTOs
+@model List<TicketsKeplerTickets.Models.DTOs.EventDto>
+@{
+    ViewData["Title"] = "Descubre eventos";
+}
+
+<section class="hero">
+    <div class="hero-bg">
+        <div class="hero-orb hero-orb--1"></div>
+        <div class="hero-orb hero-orb--2"></div>
+        <div class="hero-grid"></div>
+    </div>
+    <div class="hero-content">
+        <p class="hero-eyebrow">La plataforma de tickets más intuitiva</p>
+        <h1 class="hero-title">Vive cada<br><span class="text-accent">experiencia</span></h1>
+        <p class="hero-sub">Conciertos, teatro, deportes y más. Elige tu asiento, compra en segundos.</p>
+        <div class="hero-ctas">
+            <a asp-controller="Events" asp-action="Index" class="btn btn-primary btn-lg">
+                Ver todos los eventos
+            </a>
+            @if (User.Identity?.IsAuthenticated != true)
+            {
+                <a asp-controller="Auth" asp-action="Register" class="btn btn-outline btn-lg">
+                    Crear cuenta gratis
+                </a>
+            }
+        </div>
+    </div>
+</section>
+
+@if (Model.Any())
+{
+    <section class="section">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Próximos eventos</h2>
+                <a asp-controller="Events" asp-action="Index" class="see-all">Ver todos →</a>
+            </div>
+            <div class="events-grid">
+                @foreach (var ev in Model)
+                {
+                    <a asp-controller="Events" asp-action="Detail" asp-route-id="@ev.Id" class="event-card">
+                        <div class="event-card__img">
+                            @if (!string.IsNullOrEmpty(ev.PosterUrl))
+                            {
+                                <img src="@ev.PosterUrl" alt="@ev.Name" loading="lazy" />
+                            }
+                            else
+                            {
+                                <div class="event-card__placeholder">
+                                    <span>@GetEventEmoji(ev.Type)</span>
+                                </div>
+                            }
+                            <div class="event-card__badge">@ev.Type</div>
+                        </div>
+                        <div class="event-card__body">
+                            <h3 class="event-card__name">@ev.Name</h3>
+                            <div class="event-card__meta">
+                                <span class="meta-city">📍 @ev.VenueCity</span>
+                                <span class="meta-venue">@ev.VenueName</span>
+                            </div>
+                            <div class="event-card__footer">
+                                <span class="event-card__duration">@ev.DurationMinutes min</span>
+                                <span class="event-card__cta">Ver funciones →</span>
+                            </div>
+                        </div>
+                    </a>
+                }
+            </div>
+        </div>
+    </section>
+}
+
+<section class="how-it-works">
+    <div class="container">
+        <h2 class="section-title text-center">¿Cómo funciona?</h2>
+        <div class="steps">
+            <div class="step">
+                <div class="step-num">01</div>
+                <div class="step-icon">🎭</div>
+                <h3>Elige tu evento</h3>
+                <p>Explora conciertos, teatro, deportes y más en tu ciudad.</p>
+            </div>
+            <div class="step-arrow">→</div>
+            <div class="step">
+                <div class="step-num">02</div>
+                <div class="step-icon">💺</div>
+                <h3>Selecciona tu asiento</h3>
+                <p>Visualiza el mapa de asientos y elige el tuyo en tiempo real.</p>
+            </div>
+            <div class="step-arrow">→</div>
+            <div class="step">
+                <div class="step-num">03</div>
+                <div class="step-icon">🎟️</div>
+                <h3>Recibe tus tickets</h3>
+                <p>Paga y recibe tickets con código QR listos para usar.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+@functions {
+    string GetEventEmoji(EventType type) => type switch
+    {
+        EventType.Concert    => "🎵",
+        EventType.Theater    => "🎭",
+        EventType.Sports     => "⚽",
+        EventType.Conference => "🎤",
+        _                    => "✨"
+    };
+}

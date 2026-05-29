@@ -1,0 +1,103 @@
+@using TicketsKeplerTickets.Models.DTOs
+@model TicketsKeplerTickets.Models.ViewModels.EventDetailViewModel
+@{
+    ViewData["Title"] = Model.Event.Name;
+}
+
+<section class="event-detail-hero">
+    <div class="container">
+        <div class="event-detail-layout">
+            <div class="event-detail-poster">
+                @if (!string.IsNullOrEmpty(Model.Event.PosterUrl))
+                {
+                    <img src="@Model.Event.PosterUrl" alt="@Model.Event.Name" class="poster-img" />
+                }
+                else
+                {
+                    <div class="poster-placeholder">
+                        <span>@GetEmoji(Model.Event.Type)</span>
+                    </div>
+                }
+            </div>
+            <div class="event-detail-info">
+                <span class="event-badge">@GetLabel(Model.Event.Type)</span>
+                <h1 class="event-detail-title">@Model.Event.Name</h1>
+                <div class="event-detail-meta">
+                    <div class="meta-item">
+                        <span class="meta-icon">📍</span>
+                        <span>@Model.Event.VenueName, @Model.Event.VenueCity</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-icon">⏱</span>
+                        <span>@Model.Event.DurationMinutes minutos</span>
+                    </div>
+                </div>
+                <p class="event-detail-desc">@Model.Event.Description</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section">
+    <div class="container">
+        <h2 class="section-title">Elige una función</h2>
+
+        @if (Model.Showtimes.Any())
+        {
+            <div class="showtimes-list">
+                @foreach (var st in Model.Showtimes.Where(s => s.Status == ShowtimeStatus.Active || s.Status == ShowtimeStatus.Scheduled))
+                {
+                    var isSoldOut = st.AvailableSeats == 0;
+                    <div class="showtime-row @(isSoldOut ? "showtime-row--soldout" : "")">
+                        <div class="showtime-info">
+                            <div class="showtime-date">
+                                <span class="date-day">@st.StartTime.ToString("dd")</span>
+                                <span class="date-month">@st.StartTime.ToString("MMM").ToUpper()</span>
+                            </div>
+                            <div class="showtime-details">
+                                <span class="showtime-time">🕐 @st.StartTime.ToString("hh:mm tt") – @st.EndTime.ToString("hh:mm tt")</span>
+                                <span class="showtime-seats">
+                                    @if (isSoldOut)
+                                    {
+                                        <span class="badge-soldout">Agotado</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge-avail">@st.AvailableSeats disponibles</span>
+                                    }
+                                </span>
+                            </div>
+                        </div>
+                        <div class="showtime-right">
+                            <span class="showtime-price">Desde $@st.BasePrice.ToString("N0")</span>
+                            @if (!isSoldOut)
+                            {
+                                <a asp-controller="Events" asp-action="SelectSeats" asp-route-showtimeId="@st.Id" class="btn btn-primary btn-sm">
+                                    Elegir asientos →
+                                </a>
+                            }
+                            else
+                            {
+                                <span class="btn btn-ghost btn-sm disabled">Agotado</span>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="empty-state">
+                <div class="empty-state__icon">📅</div>
+                <h3>Sin funciones programadas</h3>
+                <p>No hay funciones disponibles para este evento en este momento.</p>
+                <a asp-controller="Events" asp-action="Index" class="btn btn-outline">Ver otros eventos</a>
+            </div>
+        }
+    </div>
+</section>
+
+@functions {
+    string GetEmoji(EventType t) => t switch { EventType.Concert => "🎵", EventType.Theater => "🎭", EventType.Sports => "⚽", EventType.Conference => "🎤", _ => "✨" };
+    string GetLabel(EventType t) => t switch { EventType.Concert => "Concierto", EventType.Theater => "Teatro", EventType.Sports => "Deporte", EventType.Conference => "Conferencia", _ => "Evento" };
+}

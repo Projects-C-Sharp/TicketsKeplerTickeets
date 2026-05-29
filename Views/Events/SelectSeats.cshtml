@@ -1,0 +1,159 @@
+@model TicketsKeplerTickets.Models.ViewModels.SeatSelectionViewModel
+@{
+    ViewData["Title"] = "Seleccionar asientos — " + Model.Event.Name;
+    var seatsJson = System.Text.Json.JsonSerializer.Serialize(
+        Model.Seats,
+        new System.Text.Json.JsonSerializerOptions {
+            PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+            Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() }
+        });
+    var isAuth = User.Identity?.IsAuthenticated == true;
+}
+
+<section class="seat-page">
+    <!-- Breadcrumb -->
+    <div class="breadcrumb container">
+        <a asp-controller="Events" asp-action="Index">Eventos</a>
+        <span>›</span>
+        <a asp-controller="Events" asp-action="Detail" asp-route-id="@Model.Event.Id">@Model.Event.Name</a>
+        <span>›</span>
+        <span>Seleccionar asientos</span>
+    </div>
+
+    <!-- Anti-forgery token for AJAX -->
+    @Html.AntiForgeryToken()
+
+    <div class="seat-layout container">
+
+        <!-- LEFT: Seat Map -->
+        <div class="seat-map-panel">
+            <div class="showtime-header">
+                <h2 class="showtime-title">@Model.Event.Name</h2>
+                <p class="showtime-meta">
+                    🕐 @Model.Showtime.StartTime.ToString("dddd, dd 'de' MMMM yyyy · hh:mm tt", new System.Globalization.CultureInfo("es-CO"))
+                </p>
+            </div>
+
+            <!-- Stage -->
+            <div class="stage-arc">
+                <div class="stage-label">ESCENARIO</div>
+            </div>
+
+            <!-- Legend -->
+            <div class="seat-legend">
+                <div class="legend-item"><div class="seat-dot seat-dot--available standard"></div><span>Estándar</span></div>
+                <div class="legend-item"><div class="seat-dot seat-dot--available premium"></div><span>Premium</span></div>
+                <div class="legend-item"><div class="seat-dot seat-dot--available vip"></div><span>VIP</span></div>
+                <div class="legend-item"><div class="seat-dot seat-dot--reserved"></div><span>Reservado</span></div>
+                <div class="legend-item"><div class="seat-dot seat-dot--sold"></div><span>Vendido</span></div>
+                <div class="legend-item"><div class="seat-dot seat-dot--selected"></div><span>Tu selección</span></div>
+            </div>
+
+            <!-- Seat Grid -->
+            <div class="seat-grid" id="seatGrid"></div>
+
+            <div class="seat-map-footer">
+                <span id="selectionCount" class="selection-count">Ningún asiento seleccionado</span>
+            </div>
+        </div>
+
+        <!-- RIGHT: Checkout Panel -->
+        <div class="checkout-panel">
+            <div class="checkout-card">
+                <h3 class="checkout-title">Tu selección</h3>
+
+                <div class="selected-list" id="selectedList">
+                    <div class="empty-selection">
+                        <span>💺</span>
+                        <p>Haz clic en los asientos disponibles para seleccionarlos</p>
+                    </div>
+                </div>
+
+                <div class="checkout-summary" id="checkoutSummary" style="display:none">
+                    <div class="summary-row"><span>Subtotal</span><span id="subtotalAmount">$0</span></div>
+                    <div class="summary-row summary-row--total"><span>Total</span><span id="totalAmount">$0</span></div>
+                </div>
+
+                <div class="checkout-timer" id="reservationTimer" style="display:none">
+                    <span class="timer-icon">⏱</span>
+                    <span>Reservación expira en: <strong id="timerDisplay">05:00</strong></span>
+                </div>
+
+                @if (isAuth)
+                {
+                    <button class="btn btn-primary btn-full" id="reserveBtn" disabled>
+                        <span class="btn-label">Reservar asientos</span>
+                        <span class="btn-spinner hidden">⟳</span>
+                    </button>
+                    <button class="btn btn-primary btn-full" id="payBtn" style="display:none">
+                        <span class="btn-label">Confirmar y pagar</span>
+                        <span class="btn-spinner hidden">⟳</span>
+                    </button>
+                    <button class="btn btn-ghost btn-full btn-sm" id="cancelBtn" style="display:none; margin-top:.5rem">
+                        Cancelar reserva
+                    </button>
+                }
+                else
+                {
+                    <div style="margin-top:1rem">
+                        <a asp-controller="Auth" asp-action="Login"
+                           asp-route-returnUrl="@Context.Request.Path"
+                           class="btn btn-primary btn-full">
+                            Inicia sesión para comprar
+                        </a>
+                        <p style="text-align:center;font-size:.8rem;color:var(--c-muted);margin-top:.75rem">
+                            ¿No tienes cuenta?
+                            <a asp-controller="Auth" asp-action="Register" class="link-accent">Regístrate gratis</a>
+                        </p>
+                    </div>
+                }
+            </div>
+
+            <!-- Payment method — shown after reserving -->
+            <div class="payment-card" id="paymentCard" style="display:none">
+                <h3 class="checkout-title">Método de pago</h3>
+                <div class="payment-methods">
+                    <label class="payment-option payment-option--active">
+                        <input type="radio" name="paymentMethod" value="CreditCard" checked class="sr-only" />
+                        <span class="pm-icon">💳</span><span>Tarjeta de crédito</span>
+                    </label>
+                    <label class="payment-option">
+                        <input type="radio" name="paymentMethod" value="DebitCard" class="sr-only" />
+                        <span class="pm-icon">🏦</span><span>Tarjeta débito</span>
+                    </label>
+                    <label class="payment-option">
+                        <input type="radio" name="paymentMethod" value="PSE" class="sr-only" />
+                        <span class="pm-icon">🔐</span><span>PSE</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Success Modal -->
+<div class="modal-overlay" id="successModal" style="display:none">
+    <div class="modal">
+        <div class="modal-icon">🎉</div>
+        <h2 class="modal-title">¡Compra exitosa!</h2>
+        <p class="modal-sub">Tus tickets han sido generados con código QR. Encuéntralos en <strong>Mis Tickets</strong>.</p>
+        <div class="modal-tickets" id="modalTickets"></div>
+        <div class="modal-actions">
+            <a asp-controller="Orders" asp-action="MyOrders" class="btn btn-primary">Ver mis tickets →</a>
+            <a asp-controller="Events" asp-action="Index" class="btn btn-ghost">Seguir explorando</a>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+const SEATS_DATA = @Html.Raw(seatsJson);
+const SHOWTIME_ID = @Model.Showtime.Id;
+const BASE_PRICE  = @Model.Showtime.BasePrice.ToString(System.Globalization.CultureInfo.InvariantCulture);
+const IS_AUTH     = @Html.Raw(isAuth.ToString().ToLower());
+const PRICE_MAP   = { 0: BASE_PRICE, 1: BASE_PRICE * 1.5, 2: BASE_PRICE * 2 };
+const TYPE_LABEL  = { 0: 'Estándar', 1: 'Premium', 2: 'VIP' };
+const TYPE_CLASS  = { 0: 'standard', 1: 'premium', 2: 'vip' };
+</script>
+<script src="~/js/seats.js" asp-append-version="true"></script>
+}

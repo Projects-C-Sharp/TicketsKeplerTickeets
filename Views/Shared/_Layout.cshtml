@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] — Kepler Tickets</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="nav-brand">
+                <span class="brand-icon">◈</span>
+                <span class="brand-text">KEPLER</span>
+            </a>
+            <div class="nav-links">
+                <a asp-controller="Events" asp-action="Index" class="nav-link">Eventos</a>
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    <a asp-controller="Orders" asp-action="MyOrders" class="nav-link">Mis Tickets</a>
+                    <div class="nav-user">
+                        <span class="user-name">@(User.Identity.Name?.Split(' ')[0])</span>
+                        <a asp-controller="Auth" asp-action="Logout" class="btn btn-ghost btn-sm">Salir</a>
+                    </div>
+                }
+                else
+                {
+                    <a asp-controller="Auth" asp-action="Login" class="btn btn-ghost btn-sm">Ingresar</a>
+                    <a asp-controller="Auth" asp-action="Register" class="btn btn-primary btn-sm">Registrarse</a>
+                }
+            </div>
+            <button class="nav-toggle" id="navToggle" aria-label="Menu">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+        <div class="nav-mobile" id="navMobile">
+            <a asp-controller="Events" asp-action="Index" class="nav-link">Eventos</a>
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                <a asp-controller="Orders" asp-action="MyOrders" class="nav-link">Mis Tickets</a>
+                <a asp-controller="Auth" asp-action="Logout" class="nav-link">Cerrar sesión</a>
+            }
+            else
+            {
+                <a asp-controller="Auth" asp-action="Login" class="nav-link">Ingresar</a>
+                <a asp-controller="Auth" asp-action="Register" class="nav-link nav-link--accent">Registrarse</a>
+            }
+        </div>
+    </nav>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="toast toast--success" id="globalToast">
+            <span class="toast-icon">✓</span>
+            @TempData["SuccessMessage"]
+        </div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="toast toast--error" id="globalToast">
+            <span class="toast-icon">✕</span>
+            @TempData["ErrorMessage"]
+        </div>
+    }
+
+    <main>
+        @RenderBody()
+    </main>
+
+    <footer class="footer">
+        <div class="footer-inner">
+            <span class="nav-brand" style="font-size:.95rem">◈ KEPLER</span>
+            <span class="footer-copy">© @DateTime.Now.Year · Todos los derechos reservados</span>
+        </div>
+    </footer>
+
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

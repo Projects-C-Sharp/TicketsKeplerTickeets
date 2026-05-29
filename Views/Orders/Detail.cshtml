@@ -1,0 +1,97 @@
+@using TicketsKeplerTickets.Models.DTOs
+@model TicketsKeplerTickets.Models.DTOs.OrderDto
+@{
+    ViewData["Title"] = "Orden #" + Model.Id.ToString("D5");
+    var tickets = ViewBag.Tickets as List<OrderTicketDto> ?? new();
+}
+
+<section class="page-header">
+    <div class="container">
+        <a asp-controller="Orders" asp-action="MyOrders" class="back-link">← Mis Tickets</a>
+        <h1 class="page-title">Orden #@Model.Id.ToString("D5")</h1>
+        <div class="order-status-large order-status--@Model.Status.ToString().ToLower()">
+            @GetStatusLabel(Model.Status)
+        </div>
+    </div>
+</section>
+
+<section class="section">
+    <div class="container">
+        <div class="order-detail-layout">
+
+            <!-- Order summary -->
+            <div class="order-summary-card">
+                <h3 class="card-title">Resumen de la orden</h3>
+                <div class="summary-items">
+                    @foreach (var item in Model.Items)
+                    {
+                        <div class="summary-item">
+                            <span>💺 @item.SeatLabel</span>
+                            <span>$@item.Price.ToString("N0")</span>
+                        </div>
+                    }
+                </div>
+                <div class="summary-total">
+                    <span>Total pagado</span>
+                    <span class="total-amount">$@Model.Total.ToString("N0")</span>
+                </div>
+                <div class="summary-meta">
+                    📅 @Model.CreatedAt.ToString("dddd, dd MMMM yyyy 'a las' hh:mm tt")
+                </div>
+            </div>
+
+            <!-- Tickets with QR -->
+            <div class="tickets-grid-area">
+                <h3 class="card-title">Tus tickets QR</h3>
+                @if (tickets.Any())
+                {
+                    <div class="tickets-grid">
+                        @foreach (var ticket in tickets)
+                        {
+                            <div class="ticket-card">
+                                <div class="ticket-card__top">
+                                    <div class="ticket-info">
+                                        <h4 class="ticket-event">@ticket.EventName</h4>
+                                        <p class="ticket-seat">Asiento: <strong>@ticket.SeatLabel</strong></p>
+                                        <p class="ticket-date">📅 @ticket.ShowtimeStart.ToString("dd MMM yyyy · hh:mm tt")</p>
+                                    </div>
+                                    <div class="ticket-qr">
+                                        @if (!string.IsNullOrEmpty(ticket.QrCodeUrl))
+                                        {
+                                            <img src="@ticket.QrCodeUrl" alt="QR @ticket.SeatLabel" class="qr-img" />
+                                        }
+                                        else
+                                        {
+                                            <div class="qr-placeholder">QR</div>
+                                        }
+                                    </div>
+                                </div>
+                                <div class="ticket-card__bottom">
+                                    <span class="ticket-id">#@ticket.Id.ToString("D8")</span>
+                                    <span class="ticket-valid">✓ Válido</span>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="empty-state">
+                        <div class="empty-state__icon">⏳</div>
+                        <p>Los tickets se generan al completar el pago.</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</section>
+
+@functions {
+    string GetStatusLabel(OrderStatus s) => s switch {
+        OrderStatus.Paid      => "✓ Pagado",
+        OrderStatus.Pending   => "⏳ Pendiente",
+        OrderStatus.Cancelled => "✕ Cancelado",
+        OrderStatus.Refunded  => "↩ Reembolsado",
+        _                     => s.ToString()
+    };
+}

@@ -1,0 +1,80 @@
+@model TicketsKeplerTickets.Models.ViewModels.RegisterViewModel
+@{
+    ViewData["Title"] = "Crear cuenta";
+    Layout = "_AuthLayout";
+}
+
+<div class="auth-card">
+    <div class="auth-card__header">
+        <a href="/" class="auth-brand">◈ KEPLER</a>
+        <h1 class="auth-title">Crea tu cuenta</h1>
+        <p class="auth-sub">Regístrate gratis y empieza a comprar tickets</p>
+    </div>
+
+    <form asp-controller="Auth" asp-action="Register" method="post" class="auth-form" id="registerForm">
+        <div asp-validation-summary="All" class="form-errors"></div>
+
+        <div class="form-group">
+            <label asp-for="FullName" class="form-label">Nombre completo</label>
+            <div class="input-wrapper">
+                <span class="input-icon">👤</span>
+                <input asp-for="FullName" class="form-input" placeholder="Juan Pérez" autocomplete="name" />
+            </div>
+            <span asp-validation-for="FullName" class="field-error"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Email" class="form-label">Correo electrónico</label>
+            <div class="input-wrapper">
+                <span class="input-icon">✉</span>
+                <input asp-for="Email" class="form-input" placeholder="tu@correo.com" autocomplete="email" />
+            </div>
+            <span asp-validation-for="Email" class="field-error"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Password" class="form-label">Contraseña</label>
+            <div class="input-wrapper">
+                <span class="input-icon">🔒</span>
+                <input asp-for="Password" class="form-input" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password" id="pwd1" />
+                <button type="button" class="toggle-password" onclick="togglePwd('pwd1',this)" tabindex="-1">👁</button>
+            </div>
+            <span asp-validation-for="Password" class="field-error"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="ConfirmPassword" class="form-label">Confirmar contraseña</label>
+            <div class="input-wrapper">
+                <span class="input-icon">🔒</span>
+                <input asp-for="ConfirmPassword" class="form-input" type="password" placeholder="Repite tu contraseña" autocomplete="new-password" id="pwd2" />
+                <button type="button" class="toggle-password" onclick="togglePwd('pwd2',this)" tabindex="-1">👁</button>
+            </div>
+            <span asp-validation-for="ConfirmPassword" class="field-error"></span>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-full" id="submitBtn">
+            <span class="btn-label">Crear cuenta</span>
+            <span class="btn-spinner hidden">⟳</span>
+        </button>
+    </form>
+
+    <div class="auth-footer">
+        ¿Ya tienes cuenta? <a asp-controller="Auth" asp-action="Login" class="link-accent">Inicia sesión</a>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+function togglePwd(id, btn) {
+    const input = document.getElementById(id);
+    if (input.type === 'password') { input.type = 'text'; btn.textContent = '🙈'; }
+    else { input.type = 'password'; btn.textContent = '👁'; }
+}
+document.getElementById('registerForm').addEventListener('submit', function() {
+    const btn = document.getElementById('submitBtn');
+    btn.querySelector('.btn-label').classList.add('hidden');
+    btn.querySelector('.btn-spinner').classList.remove('hidden');
+    btn.disabled = true;
+});
+</script>
+}
