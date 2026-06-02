@@ -120,7 +120,7 @@ public class AuthController : Controller
         await _api.ForgotPasswordAsync(new ForgotPasswordRequest { Email = vm.Email });
 
         // Always show success to avoid email enumeration
-        TempData["SuccessMessage"] = "Si el correo está registrado, recibirás un enlace para restablecer tu contraseña.";
+        TempData["SuccessMessage"] = "Si el correo está registrado, recibirás un mensaje de confirmación. Haz clic en el botón del correo para recibir tu nueva contraseña.";
         return RedirectToAction(nameof(ForgotPasswordConfirmation));
     }
 
