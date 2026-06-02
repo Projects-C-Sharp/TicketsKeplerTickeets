@@ -72,6 +72,7 @@ jobs:
             echo "── Escribir .env ──"
             cat > .env << EOF
             DOCKER_USER=${{ secrets.DOCKER_USER }}
+            API_KEY=${{ secrets.API_KEY }}
             EOF
                           
             echo "── Pull latest image ──"
