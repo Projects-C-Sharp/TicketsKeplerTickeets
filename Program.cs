@@ -20,6 +20,13 @@ builder.Services.AddHttpClient<IApiService, ApiService>(client =>
     client.BaseAddress = new Uri(builder.Configuration["ApiSettings:BaseUrl"]!);
 });
 
+// HttpClient for OpenAI (chatbot)
+builder.Services.AddHttpClient("openai", client =>
+{
+    client.BaseAddress = new Uri("https://api.openai.com/");
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
+
 // Session for JWT token storage
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>

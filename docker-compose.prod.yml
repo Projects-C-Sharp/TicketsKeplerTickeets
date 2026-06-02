@@ -21,3 +21,4 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ApiSettings__BaseUrl: "https://api.kepler.andrescortes.dev"
+      OpenAI__ApiKey: ${API_KEY}
