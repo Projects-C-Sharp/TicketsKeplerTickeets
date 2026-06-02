@@ -85,4 +85,28 @@ public class SeatSelectionViewModel
     public TicketsKeplerTickets.Models.DTOs.ShowtimeDto Showtime { get; set; } = new();
     public TicketsKeplerTickets.Models.DTOs.EventDto Event       { get; set; } = new();
     public List<TicketsKeplerTickets.Models.DTOs.SeatDto> Seats  { get; set; } = new();
+    // Non-null when the authenticated user has a Pending order for this showtime
+    public TicketsKeplerTickets.Models.DTOs.OrderDto? PendingOrder { get; set; }
+}
+
+// ─── Profile / Settings ─────────────────────────────────────────────────────
+
+public class ChangePasswordViewModel
+{
+    [Required(ErrorMessage = "La contraseña actual es requerida")]
+    [DataType(DataType.Password)]
+    [Display(Name = "Contraseña actual")]
+    public string CurrentPassword { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "La nueva contraseña es requerida")]
+    [DataType(DataType.Password)]
+    [MinLength(6, ErrorMessage = "Mínimo 6 caracteres")]
+    [Display(Name = "Nueva contraseña")]
+    public string NewPassword { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Confirma tu nueva contraseña")]
+    [DataType(DataType.Password)]
+    [Compare("NewPassword", ErrorMessage = "Las contraseñas no coinciden")]
+    [Display(Name = "Confirmar contraseña")]
+    public string ConfirmPassword { get; set; } = string.Empty;
 }

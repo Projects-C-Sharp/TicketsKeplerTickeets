@@ -27,7 +27,8 @@
                     {
                         <div class="summary-item">
                             <span>💺 @item.SeatLabel</span>
-                            <span>$@item.Price.ToString("N0")</span>
+                            @* API field is PricePaid (not Price) *@
+                            <span>$@item.PricePaid.ToString("N0")</span>
                         </div>
                     }
                 </div>
@@ -54,11 +55,20 @@
                                         <h4 class="ticket-event">@ticket.EventName</h4>
                                         <p class="ticket-seat">Asiento: <strong>@ticket.SeatLabel</strong></p>
                                         <p class="ticket-date">📅 @ticket.ShowtimeStart.ToString("dd MMM yyyy · hh:mm tt")</p>
+                                        @if (ticket.IsUsed)
+                                        {
+                                            <p style="font-size:.75rem; color:var(--c-red); margin-top:.25rem">✕ Ticket usado</p>
+                                        }
                                     </div>
                                     <div class="ticket-qr">
-                                        @if (!string.IsNullOrEmpty(ticket.QrCodeUrl))
+                                        @* API field is QrImageUrl (not QrCodeUrl); fallback to QRCode text *@
+                                        @if (!string.IsNullOrEmpty(ticket.QrImageUrl))
                                         {
-                                            <img src="@ticket.QrCodeUrl" alt="QR @ticket.SeatLabel" class="qr-img" />
+                                            <img src="@ticket.QrImageUrl" alt="QR @ticket.SeatLabel" class="qr-img" />
+                                        }
+                                        else if (!string.IsNullOrEmpty(ticket.QRCode))
+                                        {
+                                            <div class="qr-placeholder" title="@ticket.QRCode">QR</div>
                                         }
                                         else
                                         {
@@ -67,8 +77,11 @@
                                     </div>
                                 </div>
                                 <div class="ticket-card__bottom">
-                                    <span class="ticket-id">#@ticket.Id.ToString("D8")</span>
-                                    <span class="ticket-valid">✓ Válido</span>
+                                    @* API field is TicketId (not Id) *@
+                                    <span class="ticket-id">#@ticket.TicketId.ToString("D8")</span>
+                                    <span class="ticket-valid" style="color: @(ticket.IsUsed ? "var(--c-red)" : "var(--c-green)")">
+                                        @(ticket.IsUsed ? "✕ Usado" : "✓ Válido")
+                                    </span>
                                 </div>
                             </div>
                         }
@@ -91,7 +104,6 @@
         OrderStatus.Paid      => "✓ Pagado",
         OrderStatus.Pending   => "⏳ Pendiente",
         OrderStatus.Cancelled => "✕ Cancelado",
-        OrderStatus.Refunded  => "↩ Reembolsado",
         _                     => s.ToString()
     };
 }

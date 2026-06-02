@@ -1,6 +1,6 @@
 namespace TicketsKeplerTickets.Models.DTOs;
 
-// ─── Auth ───────────────────────────────────────────────────────────────────
+// ─── Auth ────────────────────────────────────────────────────────────────────
 
 public class RegisterDto
 {
@@ -13,6 +13,17 @@ public class LoginDto
 {
     public string Email    { get; set; } = string.Empty;
     public string Password { get; set; } = string.Empty;
+}
+
+public class RefreshTokenDto
+{
+    public string RefreshToken { get; set; } = string.Empty;
+}
+
+public class RefreshResult
+{
+    public string AccessToken  { get; set; } = string.Empty;
+    public string RefreshToken { get; set; } = string.Empty;
 }
 
 public class ForgotPasswordRequest
@@ -36,9 +47,25 @@ public class LoginResult
     public List<string> Roles  { get; set; } = new();
 }
 
-// ─── Events ─────────────────────────────────────────────────────────────────
+// ─── Profile ─────────────────────────────────────────────────────────────────
 
-public enum EventType { Concert = 0, Theater = 1, Sports = 2, Conference = 3, Other = 4 }
+public class UserProfileDto
+{
+    public string FullName { get; set; } = string.Empty;
+    public string Email    { get; set; } = string.Empty;
+    public string? PhotoUrl { get; set; }
+}
+
+public class ChangePasswordDto
+{
+    public string CurrentPassword { get; set; } = string.Empty;
+    public string NewPassword     { get; set; } = string.Empty;
+}
+
+// ─── Events ──────────────────────────────────────────────────────────────────
+// Matches API: Movie=0, Concert=1, Theater=2, Sports=3, Other=4
+
+public enum EventType { Movie = 0, Concert = 1, Theater = 2, Sports = 3, Other = 4 }
 
 public class EventDto
 {
@@ -54,9 +81,10 @@ public class EventDto
     public DateTime  CreatedAt       { get; set; }
 }
 
-// ─── Showtimes ───────────────────────────────────────────────────────────────
+// ─── Showtimes ────────────────────────────────────────────────────────────────
+// Matches API: Active=0, Cancelled=1, Completed=2, SoldOut=3
 
-public enum ShowtimeStatus { Scheduled = 0, Active = 1, Completed = 2, Cancelled = 3 }
+public enum ShowtimeStatus { Active = 0, Cancelled = 1, Completed = 2, SoldOut = 3 }
 
 public class ShowtimeDto
 {
@@ -72,6 +100,7 @@ public class ShowtimeDto
 }
 
 // ─── Seats ───────────────────────────────────────────────────────────────────
+// Matches API exactly
 
 public enum SeatStatus { Available = 0, Reserved = 1, Sold = 2 }
 public enum SeatType   { Standard = 0, Premium = 1, VIP = 2 }
@@ -93,22 +122,24 @@ public class ReserveSeatsRequest
     public List<int> SeatIds    { get; set; } = new();
 }
 
+// API returns: ReservedSeatIds (NOT SeatIds), ExpiresAt is nullable
 public class ReservationResult
 {
-    public bool     Success   { get; set; }
-    public string   Message   { get; set; } = string.Empty;
-    public List<int> SeatIds  { get; set; } = new();
-    public DateTime ExpiresAt { get; set; }
+    public bool      Success         { get; set; }
+    public string    Message         { get; set; } = string.Empty;
+    public List<int> ReservedSeatIds { get; set; } = new();
+    public DateTime? ExpiresAt       { get; set; }
 }
 
 // ─── Orders ──────────────────────────────────────────────────────────────────
+// Matches API: Pending=0, Paid=1, Cancelled=2 (no Refunded)
 
-public enum OrderStatus { Pending = 0, Paid = 1, Cancelled = 2, Refunded = 3 }
-public enum PaymentStatus { Pending = 0, Approved = 1, Rejected = 2 }
+public enum OrderStatus { Pending = 0, Paid = 1, Cancelled = 2 }
 
 public class CreateOrderRequest
 {
-    public List<int> SeatIds { get; set; } = new();
+    public int       ShowtimeId { get; set; }
+    public List<int> SeatIds    { get; set; } = new();
 }
 
 public class PayOrderRequest
@@ -117,11 +148,17 @@ public class PayOrderRequest
     public string PaymentMethod { get; set; } = "CreditCard";
 }
 
+// Matches API OrderItemDto exactly
 public class OrderItemDto
 {
-    public int     SeatId    { get; set; }
-    public string  SeatLabel { get; set; } = string.Empty;
-    public decimal Price     { get; set; }
+    public int      Id            { get; set; }
+    public int      SeatId        { get; set; }  // used to release seat on pending cancel
+    public string   SeatLabel     { get; set; } = string.Empty;
+    public string   EventName     { get; set; } = string.Empty;
+    public DateTime ShowtimeStart { get; set; }
+    public decimal  PricePaid     { get; set; }
+    public string?  QRCode        { get; set; }
+    public string?  QrImageUrl    { get; set; }
 }
 
 public class OrderDto
@@ -134,30 +171,63 @@ public class OrderDto
     public List<OrderItemDto> Items   { get; set; } = new();
 }
 
+// Matches API OrderTicketDto exactly
 public class OrderTicketDto
 {
-    public int    Id        { get; set; }
-    public string SeatLabel { get; set; } = string.Empty;
-    public string QrCodeUrl { get; set; } = string.Empty;
-    public string EventName { get; set; } = string.Empty;
+    public int       TicketId      { get; set; }
+    public string    QRCode        { get; set; } = string.Empty;
+    public string?   QrImageUrl    { get; set; }
+    public string    SeatLabel     { get; set; } = string.Empty;
+    public string    EventName     { get; set; } = string.Empty;
+    public DateTime  ShowtimeStart { get; set; }
+    public bool      IsUsed        { get; set; }
+    public DateTime? UsedAt        { get; set; }
+}
+
+// Matches API TicketSummaryDto (used inside PaymentResultDto)
+public class TicketSummaryDto
+{
+    public int      TicketId      { get; set; }
+    public string   QRCode        { get; set; } = string.Empty;
+    public string?  QrImageUrl    { get; set; }
+    public string   SeatLabel     { get; set; } = string.Empty;
+    public string   EventName     { get; set; } = string.Empty;
     public DateTime ShowtimeStart { get; set; }
 }
 
+// Matches API PaymentResultDto exactly
 public class PaymentResultDto
 {
-    public int    OrderId       { get; set; }
-    public string PaymentMethod { get; set; } = string.Empty;
-    public decimal Amount       { get; set; }
-    public List<OrderTicketDto> Tickets { get; set; } = new();
+    public bool      Success       { get; set; }
+    public string    TransactionId { get; set; } = string.Empty;
+    public decimal   AmountPaid    { get; set; }
+    public DateTime  PaidAt        { get; set; }
+    public List<TicketSummaryDto> Tickets { get; set; } = new();
+}
+
+// Refund (API has /refund endpoint, not /cancel)
+public class RefundRequestDto
+{
+    public string Reason { get; set; } = string.Empty;
+}
+
+public class RefundResultDto
+{
+    public int      RefundRequestId { get; set; }
+    public int      OrderId         { get; set; }
+    public int      Status          { get; set; }
+    public string   Reason          { get; set; } = string.Empty;
+    public DateTime RequestedAt     { get; set; }
 }
 
 // ─── Shared ──────────────────────────────────────────────────────────────────
 
 public class ApiResponse<T>
 {
-    public bool   Success { get; set; }
-    public string Message { get; set; } = string.Empty;
-    public T?     Data    { get; set; }
+    public bool         Success { get; set; }
+    public string       Message { get; set; } = string.Empty;
+    public T?           Data    { get; set; }
+    public List<string> Errors  { get; set; } = new();
 }
 
 public class PagedResult<T>

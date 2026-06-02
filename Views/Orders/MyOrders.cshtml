@@ -4,6 +4,8 @@
     ViewData["Title"] = "Mis Tickets";
 }
 
+@Html.AntiForgeryToken()
+
 <section class="page-header">
     <div class="container">
         <h1 class="page-title">Mis Tickets</h1>
@@ -18,7 +20,7 @@
             <div class="orders-list">
                 @foreach (var order in Model)
                 {
-                    <div class="order-card">
+                    <div class="order-card" id="order-@order.Id">
                         <div class="order-card__header">
                             <div class="order-id">
                                 <span class="order-label">Orden</span>
@@ -45,9 +47,30 @@
                         </div>
                         <div class="order-card__footer">
                             <span class="order-total">$@order.Total.ToString("N0")</span>
-                            <a asp-controller="Orders" asp-action="Detail" asp-route-id="@order.Id" class="btn btn-outline btn-sm">
-                                Ver tickets →
-                            </a>
+                            <div class="order-actions">
+                                @* Cancel button for Pending orders (releases seats via api/seats/release) *@
+                                @if (order.Status == OrderStatus.Pending)
+                                {
+                                    <button class="btn btn-danger btn-sm cancel-pending-btn"
+                                            data-order-id="@order.Id"
+                                            title="Cancelar y liberar asientos">
+                                        <span class="btn-label">✕ Cancelar orden</span>
+                                        <span class="btn-spinner hidden">⟳</span>
+                                    </button>
+                                }
+                                @* Refund for Paid orders *@
+                                @if (order.Status == OrderStatus.Paid)
+                                {
+                                    <button class="btn btn-danger btn-sm refund-order-btn"
+                                            data-order-id="@order.Id"
+                                            title="Solicitar reembolso">
+                                        Reembolso
+                                    </button>
+                                }
+                                <a asp-controller="Orders" asp-action="Detail" asp-route-id="@order.Id" class="btn btn-outline btn-sm">
+                                    Ver tickets →
+                                </a>
+                            </div>
                         </div>
                     </div>
                 }
@@ -65,12 +88,160 @@
     </div>
 </section>
 
+<!-- Refund confirmation modal -->
+<div class="modal-overlay" id="refundModal" style="display:none">
+    <div class="modal">
+        <div class="modal-icon">↩️</div>
+        <h2 class="modal-title">Solicitar reembolso</h2>
+        <p class="modal-sub">Tu solicitud quedará pendiente de revisión por el equipo de Kepler. Una vez aprobada, recibirás el reembolso.</p>
+        <div class="modal-actions">
+            <button class="btn btn-danger" id="confirmRefundBtn">
+                <span class="btn-label">Solicitar reembolso</span>
+                <span class="btn-spinner hidden">⟳</span>
+            </button>
+            <button class="btn btn-ghost" id="closeRefundModal">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Cancel pending order modal -->
+<div class="modal-overlay" id="cancelPendingModal" style="display:none">
+    <div class="modal">
+        <div class="modal-icon">⚠️</div>
+        <h2 class="modal-title">¿Cancelar orden pendiente?</h2>
+        <p class="modal-sub">Los asientos reservados serán liberados y quedarán disponibles para otros usuarios. Esta acción no se puede deshacer.</p>
+        <div class="modal-actions">
+            <button class="btn btn-danger" id="confirmCancelBtn">
+                <span class="btn-label">Sí, cancelar orden</span>
+                <span class="btn-spinner hidden">⟳</span>
+            </button>
+            <button class="btn btn-ghost" id="closeCancelModal">Volver</button>
+        </div>
+    </div>
+</div>
+
 @functions {
     string GetStatusLabel(OrderStatus s) => s switch {
         OrderStatus.Paid      => "✓ Pagado",
         OrderStatus.Pending   => "⏳ Pendiente",
         OrderStatus.Cancelled => "✕ Cancelado",
-        OrderStatus.Refunded  => "↩ Reembolsado",
         _                     => s.ToString()
     };
+}
+
+@section Scripts {
+<script>
+(function () {
+    let pendingOrderId = null;
+    let cancelOrderId  = null;
+
+    // ── Refund (Paid orders) ───────────────────────────────────────
+    const refundModal      = document.getElementById('refundModal');
+    const confirmRefundBtn = document.getElementById('confirmRefundBtn');
+    const closeRefundModal = document.getElementById('closeRefundModal');
+
+    document.querySelectorAll('.refund-order-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            pendingOrderId = parseInt(btn.dataset.orderId);
+            refundModal.style.display = 'flex';
+        });
+    });
+
+    closeRefundModal?.addEventListener('click', () => { refundModal.style.display = 'none'; pendingOrderId = null; });
+    refundModal?.addEventListener('click', e => { if (e.target === refundModal) { refundModal.style.display = 'none'; pendingOrderId = null; } });
+
+    confirmRefundBtn?.addEventListener('click', async () => {
+        if (!pendingOrderId) return;
+        setLoading(confirmRefundBtn, true);
+        try {
+            const resp = await fetch('/Orders/Refund', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': getAntiForgery() },
+                body: JSON.stringify({ orderId: pendingOrderId, reason: 'Solicitud del cliente' })
+            });
+            const data = await resp.json();
+            refundModal.style.display = 'none';
+            if (resp.ok) {
+                showToast(data.message || 'Solicitud de reembolso enviada', 'success');
+                const card = document.getElementById('order-' + pendingOrderId);
+                card?.querySelector('.refund-order-btn')?.remove();
+            } else {
+                showToast(data.message || 'No se pudo solicitar el reembolso', 'error');
+            }
+            pendingOrderId = null;
+        } catch {
+            showToast('Error de conexión. Intenta de nuevo.', 'error');
+        } finally {
+            setLoading(confirmRefundBtn, false);
+        }
+    });
+
+    // ── Cancel Pending orders ──────────────────────────────────────
+    const cancelModal      = document.getElementById('cancelPendingModal');
+    const confirmCancelBtn = document.getElementById('confirmCancelBtn');
+    const closeCancelModal = document.getElementById('closeCancelModal');
+
+    document.querySelectorAll('.cancel-pending-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            cancelOrderId = parseInt(btn.dataset.orderId);
+            cancelModal.style.display = 'flex';
+        });
+    });
+
+    closeCancelModal?.addEventListener('click', () => { cancelModal.style.display = 'none'; cancelOrderId = null; });
+    cancelModal?.addEventListener('click', e => { if (e.target === cancelModal) { cancelModal.style.display = 'none'; cancelOrderId = null; } });
+
+    confirmCancelBtn?.addEventListener('click', async () => {
+        if (!cancelOrderId) return;
+        setLoading(confirmCancelBtn, true);
+        try {
+            const resp = await fetch('/Orders/CancelPending', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': getAntiForgery() },
+                body: JSON.stringify({ orderId: cancelOrderId })
+            });
+            const data = await resp.json();
+            cancelModal.style.display = 'none';
+            if (resp.ok) {
+                showToast(data.message || 'Orden cancelada', 'success');
+                // Update the card visually: change status badge and remove cancel button
+                const card = document.getElementById('order-' + cancelOrderId);
+                if (card) {
+                    const badge = card.querySelector('.order-status');
+                    if (badge) {
+                        badge.textContent = '✕ Cancelado';
+                        badge.className = 'order-status order-status--cancelled';
+                    }
+                    card.querySelector('.cancel-pending-btn')?.remove();
+                }
+            } else {
+                showToast(data.message || 'No se pudo cancelar la orden', 'error');
+            }
+            cancelOrderId = null;
+        } catch {
+            showToast('Error de conexión. Intenta de nuevo.', 'error');
+        } finally {
+            setLoading(confirmCancelBtn, false);
+        }
+    });
+
+    function getAntiForgery() {
+        return document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+    }
+    function setLoading(btn, loading) {
+        btn.disabled = loading;
+        btn.querySelector('.btn-label')?.classList.toggle('hidden', loading);
+        btn.querySelector('.btn-spinner')?.classList.toggle('hidden', !loading);
+    }
+    function showToast(msg, type = 'success') {
+        const existing = document.querySelector('.toast-dynamic');
+        if (existing) existing.remove();
+        const t = document.createElement('div');
+        t.className = `toast toast--${type === 'error' ? 'error' : 'success'} toast-dynamic`;
+        t.innerHTML = `<span class="toast-icon">${type === 'error' ? '✕' : '✓'}</span> ${msg}`;
+        document.body.appendChild(t);
+        setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .5s'; setTimeout(() => t.remove(), 500); }, 4000);
+    }
+})();
+</script>
 }

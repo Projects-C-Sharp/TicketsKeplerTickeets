@@ -1,9 +1,17 @@
+using TicketsKeplerTickets.Middleware;
 using TicketsKeplerTickets.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews()
+    .AddJsonOptions(opts =>
+    {
+        // All controller JSON responses use camelCase (matches what JS expects)
+        opts.JsonSerializerOptions.PropertyNamingPolicy =
+            System.Text.Json.JsonNamingPolicy.CamelCase;
+        opts.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+    });
 
 // HttpClient for API communication
 builder.Services.AddHttpContextAccessor();
@@ -51,6 +59,7 @@ app.UseStaticFiles();
 app.UseRouting();
 app.UseSession();
 app.UseAuthentication();
+app.UseMiddleware<TokenRefreshMiddleware>();
 app.UseAuthorization();
 
 app.MapControllerRoute(

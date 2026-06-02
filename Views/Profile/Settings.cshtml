@@ -1,0 +1,312 @@
+@using TicketsKeplerTickets.Models.DTOs
+@{
+    ViewData["Title"] = "Mi Perfil";
+    var profile = ViewBag.Profile as UserProfileDto;
+    var userName = profile?.FullName ?? User.Identity?.Name ?? "Usuario";
+    var userEmail = profile?.Email ?? User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "";
+    var photoUrl = profile?.PhotoUrl;
+    var initials = string.Join("", (userName ?? "U").Split(' ').Take(2).Select(w => w.Length > 0 ? w[0].ToString().ToUpper() : ""));
+}
+
+@Html.AntiForgeryToken()
+
+<section class="page-header">
+    <div class="container">
+        <h1 class="page-title">Mi Perfil</h1>
+        <p class="page-sub">Administra tu cuenta y preferencias</p>
+    </div>
+</section>
+
+<section class="section">
+    <div class="container">
+        <div class="settings-layout">
+
+            <!-- Sidebar nav -->
+            <aside class="settings-nav">
+                <button class="settings-nav-item active" data-tab="profile">
+                    <span class="snav-icon">👤</span>
+                    <span>Información personal</span>
+                </button>
+                <button class="settings-nav-item" data-tab="security">
+                    <span class="snav-icon">🔐</span>
+                    <span>Seguridad</span>
+                </button>
+                <a asp-controller="Orders" asp-action="MyOrders" class="settings-nav-item settings-nav-item--link">
+                    <span class="snav-icon">🎟️</span>
+                    <span>Mis tickets</span>
+                </a>
+            </aside>
+
+            <!-- Main content -->
+            <div class="settings-content">
+
+                <!-- ── Profile tab ── -->
+                <div class="settings-tab" id="tab-profile">
+
+                    <!-- Avatar -->
+                    <div class="profile-avatar-section">
+                        <div class="avatar-wrapper" id="avatarWrapper">
+                            @if (!string.IsNullOrEmpty(photoUrl))
+                            {
+                                <img src="@photoUrl" alt="Foto de perfil" class="avatar-img" id="avatarImg" />
+                            }
+                            else
+                            {
+                                <div class="avatar-placeholder" id="avatarPlaceholder">@initials</div>
+                                <img src="" alt="Foto de perfil" class="avatar-img hidden" id="avatarImg" />
+                            }
+                            <label class="avatar-upload-btn" for="photoInput" title="Cambiar foto">
+                                📷
+                            </label>
+                            <input type="file" id="photoInput" accept="image/*" class="sr-only" />
+                        </div>
+                        <div class="avatar-info">
+                            <h3 class="avatar-name">@userName</h3>
+                            <p class="avatar-email">@userEmail</p>
+                            <p class="avatar-hint">JPG, PNG o WEBP · máx. 5 MB</p>
+                        </div>
+                    </div>
+
+                    <!-- Upload progress -->
+                    <div class="upload-progress" id="uploadProgress" style="display:none">
+                        <div class="upload-bar"><div class="upload-bar-fill" id="uploadBarFill"></div></div>
+                        <span class="upload-label" id="uploadLabel">Subiendo foto...</span>
+                    </div>
+
+                    <!-- Personal info (read-only) -->
+                    <div class="settings-card">
+                        <h3 class="settings-card-title">Información de la cuenta</h3>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <span class="info-label">Nombre completo</span>
+                                <span class="info-value">@userName</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Correo electrónico</span>
+                                <span class="info-value">@userEmail</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Rol</span>
+                                <span class="info-value"><span class="role-badge">Customer</span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Security tab ── -->
+                <div class="settings-tab hidden" id="tab-security">
+                    <div class="settings-card">
+                        <h3 class="settings-card-title">Cambiar contraseña</h3>
+                        <p class="settings-card-sub">Usa una contraseña segura de al menos 6 caracteres.</p>
+
+                        <div class="pwd-form" id="pwdForm">
+                            <div class="form-group">
+                                <label class="form-label-dark">Contraseña actual</label>
+                                <div class="input-wrapper">
+                                    <span class="input-icon">🔒</span>
+                                    <input type="password" id="currentPwd" class="form-input-dark" placeholder="••••••••" />
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label-dark">Nueva contraseña</label>
+                                <div class="input-wrapper">
+                                    <span class="input-icon">🔑</span>
+                                    <input type="password" id="newPwd" class="form-input-dark" placeholder="••••••••" />
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label-dark">Confirmar nueva contraseña</label>
+                                <div class="input-wrapper">
+                                    <span class="input-icon">🔑</span>
+                                    <input type="password" id="confirmPwd" class="form-input-dark" placeholder="••••••••" />
+                                </div>
+                            </div>
+
+                            <div id="pwdError" class="pwd-error" style="display:none"></div>
+
+                            <button class="btn btn-primary" id="changePwdBtn">
+                                <span class="btn-label">Actualizar contraseña</span>
+                                <span class="btn-spinner hidden">⟳</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+<script>
+(function () {
+    // ── Tab switching ──────────────────────────────────────────────
+    document.querySelectorAll('.settings-nav-item[data-tab]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.settings-nav-item').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.settings-tab').forEach(t => t.classList.add('hidden'));
+            btn.classList.add('active');
+            document.getElementById('tab-' + btn.dataset.tab)?.classList.remove('hidden');
+        });
+    });
+
+    // ── Photo upload ───────────────────────────────────────────────
+    const photoInput   = document.getElementById('photoInput');
+    const avatarImg    = document.getElementById('avatarImg');
+    const avatarPh     = document.getElementById('avatarPlaceholder');
+    const uploadProg   = document.getElementById('uploadProgress');
+    const uploadFill   = document.getElementById('uploadBarFill');
+    const uploadLabel  = document.getElementById('uploadLabel');
+
+    // Helper: update ALL avatar images on the page (settings + navbar)
+    function updateAllAvatars(url) {
+        if (!url) return;
+        if (avatarImg) { avatarImg.src = url; avatarImg.classList.remove('hidden'); }
+        if (avatarPh)  avatarPh.classList.add('hidden');
+        // Navbar avatar (present on every page via _Layout)
+        const navImg = document.getElementById('navAvatarImg');
+        const navPh  = document.getElementById('navAvatarPlaceholder');
+        if (navImg) { navImg.src = url; navImg.classList.remove('hidden'); }
+        if (navPh)  navPh.classList.add('hidden');
+    }
+
+    // On page load: fetch current photo from API to ensure nav is always up-to-date
+    (async function loadNavAvatar() {
+        try {
+            const r = await fetch('/Profile/PhotoUrl', { credentials: 'same-origin' });
+            if (!r.ok) return;
+            const d = await r.json();
+            if (d.photoUrl && d.photoUrl.startsWith('http')) {
+                updateAllAvatars(d.photoUrl);
+            }
+        } catch { /* non-critical */ }
+    })();
+
+    photoInput?.addEventListener('change', async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Preview immediately (local blob URL)
+        const reader = new FileReader();
+        reader.onload = ev => {
+            if (avatarImg) { avatarImg.src = ev.target.result; avatarImg.classList.remove('hidden'); }
+            if (avatarPh)  avatarPh.classList.add('hidden');
+        };
+        reader.readAsDataURL(file);
+
+        // Upload
+        uploadProg.style.display = 'flex';
+        uploadFill.style.width = '30%';
+        uploadLabel.textContent = 'Subiendo foto...';
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            uploadFill.style.width = '70%';
+            const resp = await fetch('/Profile/UploadPhoto', {
+                method: 'POST',
+                // NOTE: no Content-Type header — browser sets multipart/form-data with boundary automatically
+                headers: { 'RequestVerificationToken': getAntiForgery() },
+                body: formData
+            });
+            const data = await resp.json().catch(() => ({}));
+            uploadFill.style.width = '100%';
+            if (resp.ok) {
+                uploadLabel.textContent = '✓ Foto actualizada';
+                showToast('¡Foto de perfil actualizada!', 'success');
+                const newUrl = data.photoUrl || data.message || null;
+                if (newUrl && newUrl.startsWith('http')) {
+                    updateAllAvatars(newUrl);
+                }
+            } else {
+                uploadLabel.textContent = '✕ ' + (data.message || 'Error al subir');
+                showToast(data.message || 'Error al subir la foto', 'error');
+                // Revert preview on error — only if no valid remote URL was shown before
+                if (avatarImg && !avatarImg.getAttribute('src')?.startsWith('http')) {
+                    avatarImg.classList.add('hidden');
+                    if (avatarPh) avatarPh.classList.remove('hidden');
+                }
+            }
+        } catch (err) {
+            uploadLabel.textContent = '✕ Error de conexión';
+            showToast('Error de conexión', 'error');
+        } finally {
+            setTimeout(() => { uploadProg.style.display = 'none'; uploadFill.style.width = '0%'; }, 2500);
+        }
+    });
+
+    // ── Change password ────────────────────────────────────────────
+    const changePwdBtn = document.getElementById('changePwdBtn');
+    const pwdError     = document.getElementById('pwdError');
+
+    changePwdBtn?.addEventListener('click', async () => {
+        const current = document.getElementById('currentPwd').value.trim();
+        const newPwd  = document.getElementById('newPwd').value.trim();
+        const confirm = document.getElementById('confirmPwd').value.trim();
+
+        pwdError.style.display = 'none';
+
+        if (!current || !newPwd || !confirm) {
+            showPwdError('Completa todos los campos.');
+            return;
+        }
+        if (newPwd.length < 6) {
+            showPwdError('La nueva contraseña debe tener al menos 6 caracteres.');
+            return;
+        }
+        if (newPwd !== confirm) {
+            showPwdError('Las contraseñas no coinciden.');
+            return;
+        }
+
+        setLoading(changePwdBtn, true);
+        try {
+            const resp = await fetch('/Profile/ChangePassword', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': getAntiForgery() },
+                body: JSON.stringify({ currentPassword: current, newPassword: newPwd })
+            });
+            const data = await resp.json();
+            if (resp.ok) {
+                showToast('¡Contraseña actualizada correctamente!', 'success');
+                document.getElementById('currentPwd').value = '';
+                document.getElementById('newPwd').value = '';
+                document.getElementById('confirmPwd').value = '';
+            } else {
+                showPwdError(data.message || 'Error al cambiar la contraseña.');
+            }
+        } catch {
+            showPwdError('Error de conexión. Intenta de nuevo.');
+        } finally {
+            setLoading(changePwdBtn, false);
+        }
+    });
+
+    function showPwdError(msg) {
+        pwdError.textContent = '✕ ' + msg;
+        pwdError.style.display = 'block';
+    }
+
+    function getAntiForgery() {
+        return document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+    }
+
+    function setLoading(btn, loading) {
+        btn.disabled = loading;
+        btn.querySelector('.btn-label')?.classList.toggle('hidden', loading);
+        btn.querySelector('.btn-spinner')?.classList.toggle('hidden', !loading);
+    }
+
+    function showToast(msg, type = 'success') {
+        const existing = document.querySelector('.toast-dynamic');
+        if (existing) existing.remove();
+        const t = document.createElement('div');
+        t.className = `toast toast--${type === 'error' ? 'error' : 'success'} toast-dynamic`;
+        t.innerHTML = `<span class="toast-icon">${type === 'error' ? '✕' : '✓'}</span> ${msg}`;
+        document.body.appendChild(t);
+        setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .5s'; setTimeout(() => t.remove(), 500); }, 4000);
+    }
+})();
+</script>
+}

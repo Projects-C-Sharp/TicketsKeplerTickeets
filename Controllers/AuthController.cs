@@ -17,9 +17,11 @@ public class AuthController : Controller
     // ─── Login ───────────────────────────────────────────────────────────────
 
     [HttpGet]
-    public IActionResult Login(string? returnUrl = null)
+    public IActionResult Login(string? returnUrl = null, string? reason = null)
     {
         if (User.Identity?.IsAuthenticated == true) return RedirectToAction("Index", "Home");
+        if (reason == "session_expired")
+            TempData["WarningMessage"] = "Tu sesión expiró. Por favor inicia sesión nuevamente.";
         return View(new LoginViewModel { ReturnUrl = returnUrl });
     }
 

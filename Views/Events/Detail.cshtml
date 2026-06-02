@@ -4,6 +4,13 @@
     ViewData["Title"] = Model.Event.Name;
 }
 
+@if (TempData["ErrorMessage"] != null)
+{
+    <div style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);color:#f87171;padding:.85rem 1.25rem;border-radius:8px;margin:1rem auto;max-width:960px;display:flex;align-items:center;gap:.5rem">
+        <span>⚠️</span> @TempData["ErrorMessage"]
+    </div>
+}
+
 <section class="event-detail-hero">
     <div class="container">
         <div class="event-detail-layout">
@@ -44,8 +51,21 @@
 
         @if (Model.Showtimes.Any())
         {
+            var now = DateTime.UtcNow;
+            var activeShowtimes = Model.Showtimes
+                .Where(s => s.Status == ShowtimeStatus.Active && s.StartTime > now)
+                .OrderBy(s => s.StartTime)
+                .ToList();
+
+            var pastShowtimes = Model.Showtimes
+                .Where(s => s.StartTime <= now)
+                .OrderByDescending(s => s.StartTime)
+                .ToList();
+
+            @if (activeShowtimes.Any())
+            {
             <div class="showtimes-list">
-                @foreach (var st in Model.Showtimes.Where(s => s.Status == ShowtimeStatus.Active || s.Status == ShowtimeStatus.Scheduled))
+                @foreach (var st in activeShowtimes)
                 {
                     var isSoldOut = st.AvailableSeats == 0;
                     <div class="showtime-row @(isSoldOut ? "showtime-row--soldout" : "")">
@@ -84,6 +104,46 @@
                     </div>
                 }
             </div>
+            }
+            else
+            {
+            <div class="empty-state">
+                <div class="empty-state__icon">📅</div>
+                <h3>Sin funciones próximas</h3>
+                <p>No hay funciones disponibles para este evento en este momento.</p>
+                <a asp-controller="Events" asp-action="Index" class="btn btn-outline">Ver otros eventos</a>
+            </div>
+            }
+
+            @if (pastShowtimes.Any())
+            {
+            <details class="past-showtimes-section" style="margin-top:2rem">
+                <summary style="cursor:pointer;color:var(--c-muted);font-size:.9rem;margin-bottom:1rem;list-style:none;display:flex;align-items:center;gap:.5rem">
+                    <span>📆</span> Ver funciones pasadas (@pastShowtimes.Count)
+                </summary>
+                <div class="showtimes-list" style="opacity:.55;pointer-events:none">
+                    @foreach (var st in pastShowtimes)
+                    {
+                    <div class="showtime-row showtime-row--soldout">
+                        <div class="showtime-info">
+                            <div class="showtime-date">
+                                <span class="date-day">@st.StartTime.ToString("dd")</span>
+                                <span class="date-month">@st.StartTime.ToString("MMM").ToUpper()</span>
+                            </div>
+                            <div class="showtime-details">
+                                <span class="showtime-time">🕐 @st.StartTime.ToString("hh:mm tt") – @st.EndTime.ToString("hh:mm tt")</span>
+                                <span class="showtime-seats"><span class="badge-soldout">Función pasada</span></span>
+                            </div>
+                        </div>
+                        <div class="showtime-right">
+                            <span class="showtime-price">Desde $@st.BasePrice.ToString("N0")</span>
+                            <span class="btn btn-ghost btn-sm disabled">No disponible</span>
+                        </div>
+                    </div>
+                    }
+                </div>
+            </details>
+            }
         }
         else
         {
@@ -98,6 +158,6 @@
 </section>
 
 @functions {
-    string GetEmoji(EventType t) => t switch { EventType.Concert => "🎵", EventType.Theater => "🎭", EventType.Sports => "⚽", EventType.Conference => "🎤", _ => "✨" };
-    string GetLabel(EventType t) => t switch { EventType.Concert => "Concierto", EventType.Theater => "Teatro", EventType.Sports => "Deporte", EventType.Conference => "Conferencia", _ => "Evento" };
+    string GetEmoji(EventType t) => t switch { EventType.Concert => "🎵", EventType.Theater => "🎭", EventType.Sports => "⚽", EventType.Movie => "🎬", _ => "✨" };
+    string GetLabel(EventType t) => t switch { EventType.Concert => "Concierto", EventType.Theater => "Teatro", EventType.Sports => "Deporte", EventType.Movie => "Película", _ => "Evento" };
 }

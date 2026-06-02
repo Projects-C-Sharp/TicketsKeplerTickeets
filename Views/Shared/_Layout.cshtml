@@ -21,9 +21,22 @@
                 <a asp-controller="Events" asp-action="Index" class="nav-link">Eventos</a>
                 @if (User.Identity?.IsAuthenticated == true)
                 {
+                    var navPhotoUrl = User.FindFirst("PhotoUrl")?.Value;
+                    var navInitials = string.Join("", (User.Identity.Name ?? "U").Split(' ').Take(2).Select(w => w.Length > 0 ? w[0].ToString().ToUpper() : ""));
                     <a asp-controller="Orders" asp-action="MyOrders" class="nav-link">Mis Tickets</a>
                     <div class="nav-user">
-                        <span class="user-name">@(User.Identity.Name?.Split(' ')[0])</span>
+                        <a asp-controller="Profile" asp-action="Settings" class="nav-avatar-link" title="Mi Perfil">
+                            @if (!string.IsNullOrEmpty(navPhotoUrl))
+                            {
+                                <img src="@navPhotoUrl" alt="Foto de perfil" class="nav-avatar-img" id="navAvatarImg" />
+                            }
+                            else
+                            {
+                                <div class="nav-avatar-placeholder" id="navAvatarPlaceholder">@navInitials</div>
+                                <img src="" alt="Foto de perfil" class="nav-avatar-img hidden" id="navAvatarImg" />
+                            }
+                        </a>
+                        <a asp-controller="Profile" asp-action="Settings" class="user-name user-name--link">@(User.Identity.Name?.Split(' ')[0])</a>
                         <a asp-controller="Auth" asp-action="Logout" class="btn btn-ghost btn-sm">Salir</a>
                     </div>
                 }
@@ -42,6 +55,7 @@
             @if (User.Identity?.IsAuthenticated == true)
             {
                 <a asp-controller="Orders" asp-action="MyOrders" class="nav-link">Mis Tickets</a>
+                <a asp-controller="Profile" asp-action="Settings" class="nav-link">Mi Perfil</a>
                 <a asp-controller="Auth" asp-action="Logout" class="nav-link">Cerrar sesión</a>
             }
             else
@@ -57,6 +71,13 @@
         <div class="toast toast--success" id="globalToast">
             <span class="toast-icon">✓</span>
             @TempData["SuccessMessage"]
+        </div>
+    }
+    @if (TempData["WarningMessage"] != null)
+    {
+        <div class="toast toast--error" id="globalToast" style="background:rgba(251,191,36,.12);border-color:rgba(251,191,36,.3);color:#fbbf24">
+            <span class="toast-icon">⚠️</span>
+            @TempData["WarningMessage"]
         </div>
     }
     @if (TempData["ErrorMessage"] != null)
@@ -79,6 +100,27 @@
     </footer>
 
     <script src="~/js/site.js" asp-append-version="true"></script>
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        <script>
+        // Load nav avatar on every page (non-blocking)
+        (function() {
+            var navImg = document.getElementById('navAvatarImg');
+            var navPh  = document.getElementById('navAvatarPlaceholder');
+            if (!navImg) return;
+            fetch('/Profile/PhotoUrl', { credentials: 'same-origin' })
+                .then(function(r) { return r.ok ? r.json() : null; })
+                .then(function(d) {
+                    if (d && d.photoUrl && d.photoUrl.indexOf('http') === 0) {
+                        navImg.src = d.photoUrl;
+                        navImg.classList.remove('hidden');
+                        if (navPh) navPh.classList.add('hidden');
+                    }
+                })
+                .catch(function(){});
+        })();
+        </script>
+    }
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

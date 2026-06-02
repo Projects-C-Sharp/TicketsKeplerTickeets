@@ -80,7 +80,7 @@
         EventType.Concert    => "🎵",
         EventType.Theater    => "🎭",
         EventType.Sports     => "⚽",
-        EventType.Conference => "🎤",
+        EventType.Movie => "🎬",
         _                    => "✨"
     };
     string GetEventLabel(EventType type) => type switch
@@ -88,7 +88,7 @@
         EventType.Concert    => "Concierto",
         EventType.Theater    => "Teatro",
         EventType.Sports     => "Deporte",
-        EventType.Conference => "Conferencia",
+        EventType.Movie => "Película",
         _                    => "Evento"
     };
 }
