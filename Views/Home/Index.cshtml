@@ -1,4 +1,3 @@
-﻿
 @using TicketsKeplerTickets.Models.DTOs
 @model List<TicketsKeplerTickets.Models.DTOs.EventDto>
 @{
@@ -12,22 +11,37 @@
         <div class="hero-grid"></div>
     </div>
     <div class="hero-content">
-        <p class="hero-eyebrow">La plataforma de tickets más intuitiva</p>
-        <h1 class="hero-title">Vive cada<br><span class="text-accent">experiencia</span></h1>
-        <p class="hero-sub">Conciertos, teatro, deportes y más. Elige tu asiento, compra en segundos.</p>
+        <p class="hero-eyebrow">Tu acceso a experiencias inolvidables</p>
+        <h1 class="hero-title">Tus próximos<br><span class="text-accent">recuerdos</span><br>empiezan aquí.</h1>
+        <p class="hero-sub">Compra tus boletos para conciertos, festivales, deportes y más.</p>
         <div class="hero-ctas">
             <a asp-controller="Events" asp-action="Index" class="btn btn-primary btn-lg">
-                Ver todos los eventos
+                Explorar eventos →
             </a>
             @if (User.Identity?.IsAuthenticated != true)
             {
                 <a asp-controller="Auth" asp-action="Register" class="btn btn-outline btn-lg">
-                    Crear cuenta gratis
+                    Cómo funciona
                 </a>
             }
         </div>
     </div>
 </section>
+
+@if (User.Identity?.IsAuthenticated == true)
+{
+    <section class="section favorites-section" id="favoritesSection" style="padding-bottom:0">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">⭐ Mis favoritos</h2>
+                <a asp-controller="Events" asp-action="Index" class="see-all" id="favSeeAll" style="display:none">Ver todos →</a>
+            </div>
+            <div id="favoritesHomeGrid" class="events-grid">
+                <!-- loaded by JS -->
+            </div>
+        </div>
+    </section>
+}
 
 @if (Model.Any())
 {
@@ -65,6 +79,10 @@
                                 <span class="event-card__cta">Ver funciones →</span>
                             </div>
                         </div>
+                        @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            <button class="fav-btn" data-event-id="@ev.Id" title="Guardar favorito" onclick="event.preventDefault();toggleFav(this,@ev.Id)">♡</button>
+                        }
                     </a>
                 }
             </div>
@@ -109,4 +127,42 @@
         EventType.Movie => "🎬",
         _                    => "✨"
     };
+}
+
+@section Scripts {
+<script>
+(function() {
+    // ── init fav buttons ───────────────────────────────────────────
+    initFavButtons();
+
+    // ── load favorites grid (authenticated only) ───────────────────
+    var grid = document.getElementById('favoritesHomeGrid');
+    if (!grid) return;
+
+    fetch('/Favorites/Events')
+        .then(function(r){ return r.ok ? r.json() : []; })
+        .then(function(events) {
+            if (!events || events.length === 0) {
+                grid.innerHTML = '<div class="favorites-empty"><span class="fav-hint-icon">♡</span><span>Guarda eventos con el corazón en las tarjetas y aparecerán aquí.</span></div>';
+                return;
+            }
+            document.getElementById('favSeeAll').style.display = '';
+            grid.innerHTML = events.slice(0,4).map(function(e) {
+                return '<a href="/Events/Detail/' + e.id + '" class="event-card">' +
+                    '<div class="event-card__img">' +
+                        (e.posterUrl ? '<img src="' + e.posterUrl + '" alt="' + e.name + '" loading="lazy"/>' : '<div class="event-card__placeholder">' + e.typeEmoji + '</div>') +
+                        '<div class="event-card__badge">' + e.typeLabel + '</div>' +
+                    '</div>' +
+                    '<div class="event-card__body">' +
+                        '<h3 class="event-card__name">' + e.name + '</h3>' +
+                        '<div class="event-card__meta"><span>📍 ' + e.venueCity + '</span><span>' + e.venueName + '</span></div>' +
+                        '<div class="event-card__footer"><span class="event-card__duration"></span><span class="event-card__cta">Ver funciones →</span></div>' +
+                    '</div>' +
+                    '<button class="fav-btn is-fav" data-event-id="' + e.id + '" title="Quitar favorito" onclick="event.preventDefault();toggleFav(this,' + e.id + ')">♥</button>' +
+                '</a>';
+            }).join('');
+        })
+        .catch(function(){ grid.style.display='none'; });
+})();
+</script>
 }

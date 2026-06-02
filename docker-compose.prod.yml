@@ -1,0 +1,23 @@
+# ─────────────────────────────────────────
+# API — ASP.NET Core 10 - PRODUCTION
+# ─────────────────────────────────────────
+version: '3.9'
+
+services:
+  admin-tickets:
+    container_name: user-tickets
+
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    image: ${DOCKER_USER}/user-tickets:latest
+
+    ports:
+      - "5205:8080"
+
+    restart: unless-stopped
+    
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ApiSettings__BaseUrl: "https://api.kepler.andrescortes.dev"

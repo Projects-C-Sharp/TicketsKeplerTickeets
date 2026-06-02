@@ -44,6 +44,10 @@
                                 <span class="event-card__cta">Ver funciones →</span>
                             </div>
                         </div>
+                        @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            <button class="fav-btn" data-event-id="@ev.Id" title="Guardar favorito" onclick="event.preventDefault();toggleFav(this,@ev.Id)">♡</button>
+                        }
                     </a>
                 }
             </div>
@@ -91,4 +95,10 @@
         EventType.Movie => "Película",
         _                    => "Evento"
     };
+}
+
+@section Scripts {
+<script>
+initFavButtons();
+</script>
 }

@@ -1,0 +1,19 @@
+# ─────────────────────────────────────────
+# API — ASP.NET Core 10
+# ─────────────────────────────────────────
+version: '3.9'
+  
+services:
+  admin-tickets:
+    container_name: user-tickets
+      
+    build:
+      context: .
+      dockerfile: Dockerfile
+      
+    image: user-tickets:latest
+      
+    ports:
+      - "5205:8080"
+      
+    restart: unless-stopped

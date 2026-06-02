@@ -31,6 +31,10 @@
                     <span class="snav-icon">🔐</span>
                     <span>Seguridad</span>
                 </button>
+                <button class="settings-nav-item" data-tab="favorites">
+                    <span class="snav-icon">♥</span>
+                    <span>Mis favoritos</span>
+                </button>
                 <a asp-controller="Orders" asp-action="MyOrders" class="settings-nav-item settings-nav-item--link">
                     <span class="snav-icon">🎟️</span>
                     <span>Mis tickets</span>
@@ -132,6 +136,17 @@
                     </div>
                 </div>
 
+                <!-- ── Favorites tab ── -->
+                <div class="settings-tab hidden" id="tab-favorites">
+                    <div class="settings-card">
+                        <h3 class="settings-card-title">Eventos guardados</h3>
+                        <p class="settings-card-sub">Todos los eventos que marcaste como favoritos.</p>
+                        <div id="favTabGrid" class="fav-events-grid">
+                            <p style="color:var(--c-muted);font-size:.85rem">Cargando...</p>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
@@ -146,9 +161,59 @@
             document.querySelectorAll('.settings-nav-item').forEach(b => b.classList.remove('active'));
             document.querySelectorAll('.settings-tab').forEach(t => t.classList.add('hidden'));
             btn.classList.add('active');
-            document.getElementById('tab-' + btn.dataset.tab)?.classList.remove('hidden');
+            const tab = document.getElementById('tab-' + btn.dataset.tab);
+            tab?.classList.remove('hidden');
+            if (btn.dataset.tab === 'favorites') loadFavTab();
         });
     });
+
+    // ── Favorites tab loader ───────────────────────────────────────
+    let favLoaded = false;
+    function loadFavTab() {
+        if (favLoaded) return;
+        favLoaded = true;
+        const grid = document.getElementById('favTabGrid');
+        fetch('/Favorites/Events')
+            .then(r => r.ok ? r.json() : [])
+            .then(events => {
+                if (!events || events.length === 0) {
+                    grid.innerHTML = '<div class="favorites-empty"><span class="fav-hint-icon">♡</span><span>No tienes eventos guardados aún. Explora los eventos y usa el corazón para guardarlos aquí.</span></div>';
+                    return;
+                }
+                grid.innerHTML = events.map(e => `
+                    <div class="fav-event-card" id="fav-card-${e.id}">
+                        <a href="/Events/Detail/${e.id}" style="text-decoration:none;color:inherit">
+                            <div class="fav-event-card__img">
+                                ${e.posterUrl ? `<img src="${e.posterUrl}" alt="${e.name}" loading="lazy"/>` : e.typeEmoji}
+                            </div>
+                            <div class="fav-event-card__body">
+                                <div class="fav-event-card__name">${e.name}</div>
+                                <div class="fav-event-card__meta">📍 ${e.venueCity} · ${e.venueName}</div>
+                            </div>
+                        </a>
+                        <div class="fav-event-card__footer">
+                            <span style="font-size:.75rem;color:var(--c-muted)">${e.typeLabel}</span>
+                            <button class="fav-remove-btn" onclick="removeFavFromTab(${e.id})">✕ Quitar</button>
+                        </div>
+                    </div>
+                `).join('');
+            })
+            .catch(() => {
+                grid.innerHTML = '<p style="color:var(--c-muted)">Error al cargar favoritos.</p>';
+            });
+    }
+
+    window.removeFavFromTab = function(id) {
+        fetch('/Favorites/Toggle', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ eventId: id })
+        }).then(() => {
+            const card = document.getElementById('fav-card-' + id);
+            if (card) { card.style.opacity='0'; card.style.transition='opacity .3s'; setTimeout(() => card.remove(), 300); }
+            favLoaded = false;
+        });
+    };
 
     // ── Photo upload ───────────────────────────────────────────────
     const photoInput   = document.getElementById('photoInput');
@@ -158,55 +223,43 @@
     const uploadFill   = document.getElementById('uploadBarFill');
     const uploadLabel  = document.getElementById('uploadLabel');
 
-    // Helper: update ALL avatar images on the page (settings + navbar)
     function updateAllAvatars(url) {
         if (!url) return;
         if (avatarImg) { avatarImg.src = url; avatarImg.classList.remove('hidden'); }
         if (avatarPh)  avatarPh.classList.add('hidden');
-        // Navbar avatar (present on every page via _Layout)
         const navImg = document.getElementById('navAvatarImg');
         const navPh  = document.getElementById('navAvatarPlaceholder');
         if (navImg) { navImg.src = url; navImg.classList.remove('hidden'); }
         if (navPh)  navPh.classList.add('hidden');
     }
 
-    // On page load: fetch current photo from API to ensure nav is always up-to-date
     (async function loadNavAvatar() {
         try {
             const r = await fetch('/Profile/PhotoUrl', { credentials: 'same-origin' });
             if (!r.ok) return;
             const d = await r.json();
-            if (d.photoUrl && d.photoUrl.startsWith('http')) {
-                updateAllAvatars(d.photoUrl);
-            }
-        } catch { /* non-critical */ }
+            if (d.photoUrl && d.photoUrl.startsWith('http')) updateAllAvatars(d.photoUrl);
+        } catch { }
     })();
 
     photoInput?.addEventListener('change', async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
-
-        // Preview immediately (local blob URL)
         const reader = new FileReader();
         reader.onload = ev => {
             if (avatarImg) { avatarImg.src = ev.target.result; avatarImg.classList.remove('hidden'); }
             if (avatarPh)  avatarPh.classList.add('hidden');
         };
         reader.readAsDataURL(file);
-
-        // Upload
         uploadProg.style.display = 'flex';
         uploadFill.style.width = '30%';
         uploadLabel.textContent = 'Subiendo foto...';
-
         const formData = new FormData();
         formData.append('file', file);
-
         try {
             uploadFill.style.width = '70%';
             const resp = await fetch('/Profile/UploadPhoto', {
                 method: 'POST',
-                // NOTE: no Content-Type header — browser sets multipart/form-data with boundary automatically
                 headers: { 'RequestVerificationToken': getAntiForgery() },
                 body: formData
             });
@@ -216,19 +269,16 @@
                 uploadLabel.textContent = '✓ Foto actualizada';
                 showToast('¡Foto de perfil actualizada!', 'success');
                 const newUrl = data.photoUrl || data.message || null;
-                if (newUrl && newUrl.startsWith('http')) {
-                    updateAllAvatars(newUrl);
-                }
+                if (newUrl && newUrl.startsWith('http')) updateAllAvatars(newUrl);
             } else {
                 uploadLabel.textContent = '✕ ' + (data.message || 'Error al subir');
                 showToast(data.message || 'Error al subir la foto', 'error');
-                // Revert preview on error — only if no valid remote URL was shown before
                 if (avatarImg && !avatarImg.getAttribute('src')?.startsWith('http')) {
                     avatarImg.classList.add('hidden');
                     if (avatarPh) avatarPh.classList.remove('hidden');
                 }
             }
-        } catch (err) {
+        } catch {
             uploadLabel.textContent = '✕ Error de conexión';
             showToast('Error de conexión', 'error');
         } finally {
@@ -244,22 +294,10 @@
         const current = document.getElementById('currentPwd').value.trim();
         const newPwd  = document.getElementById('newPwd').value.trim();
         const confirm = document.getElementById('confirmPwd').value.trim();
-
         pwdError.style.display = 'none';
-
-        if (!current || !newPwd || !confirm) {
-            showPwdError('Completa todos los campos.');
-            return;
-        }
-        if (newPwd.length < 6) {
-            showPwdError('La nueva contraseña debe tener al menos 6 caracteres.');
-            return;
-        }
-        if (newPwd !== confirm) {
-            showPwdError('Las contraseñas no coinciden.');
-            return;
-        }
-
+        if (!current || !newPwd || !confirm) { showPwdError('Completa todos los campos.'); return; }
+        if (newPwd.length < 6) { showPwdError('La nueva contraseña debe tener al menos 6 caracteres.'); return; }
+        if (newPwd !== confirm) { showPwdError('Las contraseñas no coinciden.'); return; }
         setLoading(changePwdBtn, true);
         try {
             const resp = await fetch('/Profile/ChangePassword', {
@@ -276,28 +314,17 @@
             } else {
                 showPwdError(data.message || 'Error al cambiar la contraseña.');
             }
-        } catch {
-            showPwdError('Error de conexión. Intenta de nuevo.');
-        } finally {
-            setLoading(changePwdBtn, false);
-        }
+        } catch { showPwdError('Error de conexión. Intenta de nuevo.'); }
+        finally { setLoading(changePwdBtn, false); }
     });
 
-    function showPwdError(msg) {
-        pwdError.textContent = '✕ ' + msg;
-        pwdError.style.display = 'block';
-    }
-
-    function getAntiForgery() {
-        return document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
-    }
-
+    function showPwdError(msg) { pwdError.textContent = '✕ ' + msg; pwdError.style.display = 'block'; }
+    function getAntiForgery() { return document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''; }
     function setLoading(btn, loading) {
         btn.disabled = loading;
         btn.querySelector('.btn-label')?.classList.toggle('hidden', loading);
         btn.querySelector('.btn-spinner')?.classList.toggle('hidden', !loading);
     }
-
     function showToast(msg, type = 'success') {
         const existing = document.querySelector('.toast-dynamic');
         if (existing) existing.remove();
